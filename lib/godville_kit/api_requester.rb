@@ -3,17 +3,24 @@ module GodvilleKit
     attr_reader :username,
                 :password,
                 :hero_guid,
-                :pantheons_guid
+                :pantheons_guid,
+                :game_host
 
     class UnexpectedResponseException < StandardError; end
     class InvalidAuthenticationException < StandardError; end
     class AuthenticationCaptchaException < StandardError; end
 
-    def initialize(username, password, hero_guid, pantheons_guid)
+    def initialize(username, password, hero_guid, pantheons_guid, game_language='en')
       @username = username
       @password = password
       @hero_guid = hero_guid
       @pantheons_guid = pantheons_guid
+      @game_host = case game_language
+      when 'ru'
+        'godville.net'
+      else
+        'godvillegame.com'
+      end
     end
 
     def request_hero
@@ -25,11 +32,11 @@ module GodvilleKit
       return if authenticated?
 
       RestClient.post(
-        'https://godvillegame.com/login/login',
+        "https://#{@game_host}/login/login",
         { username: @username,
           password: @password },
         content_type: :json, accept: :json
-      )do |response, request, result, &block|
+      ) do |response, request, result, &block|
         case response.code
         when 302
           @cookies = response.cookies
@@ -57,7 +64,7 @@ module GodvilleKit
       return unless authenticated?
 
       response = RestClient.get(
-        "https://godvillegame.com/fbh/feed?a=#{@hero_guid}",
+        "https://#{@game_host}/fbh/feed?a=#{@hero_guid}",
         cookies: @cookies, content_type: :json, accept: :json
       )
       JSON.parse(response)
@@ -68,7 +75,7 @@ module GodvilleKit
       return unless authenticated?
 
       response = RestClient.get(
-        "https://godvillegame.com/fbh/feed?a=#{@pantheons_guid}",
+        "https://#{@game_host}/fbh/feed?a=#{@pantheons_guid}",
         cookies: @cookies, content_type: :json, accept: :json
       )
       JSON.parse(response)
